@@ -122,17 +122,18 @@ def main():
 
     creating_items()
 
-#  2 my_book_items_dict[str,BookItem]    V
-#  3 Put /boobks/{name}                           V
-#  4 get /books/{name}                             V
-#  5 Create delete Api                              V
-#  6 Create GET APIs (all items saved)      V
 
 #API TIMES
 @app.put("/books/{name}") 
 def createBook(book:BookItem, name:str)-> None:
-    my_book_items_dict[name]=book
-    print("Added : ", book.book_name)
+    if name in my_book_items_dict:
+        raise HTTPException(status_code=400, detail=f"Book with name '{name}' already exists")
+    if isinstance(book, BookItem):
+        my_book_items_dict[name]=book
+        print("Added : ", book.book_name)
+        return
+    else:
+        raise  HTTPException(status_code=400, detail="Book insertion attempt has corrupted or incorrect data") #still get 422, Discord said it was fine.
 
 @app.get("/books/{name}")
 def readBook(name:str)-> BookItem:
@@ -146,10 +147,13 @@ def readBook(name:str)-> BookItem:
     
 @app.get("/books/")
 def getBooks()-> List[BookItem]:
-    print("Success, like hot chocolate in winter")
-    return  my_book_items_dict.values()
-    
+    if my_book_items_dict:
+        return  my_book_items_dict.values()
+    else:  
+        my_message= "No books available"
+        raise HTTPException(status_code=404, detail=my_message)
 @app.delete("/books/{name}")
+
 def deleteBook(name:str)-> Dict:
     if name in my_book_items_dict.keys():
         deleted_item=my_book_items_dict[name]
@@ -158,6 +162,16 @@ def deleteBook(name:str)-> Dict:
         return {"message": "Deleted the following: " + str(deleted_item.book_name)}
     else:
         raise HTTPException(status_code=404, detail="Book not found")
-
+    
+@app.delete("/books/")
+def deleteAllBooks() -> Dict:
+    if my_book_items_dict:
+        books_to_delete = dict(my_book_items_dict)  
+        my_book_items_dict.clear()  
+        print("Cleared all books")
+        return {"message": "Cleared all books", "deleted_items": books_to_delete}
+    else:
+        raise HTTPException(status_code=404, detail="No books to clear di8d you hear?")
+    
 if __name__=="__main__":
     main()
